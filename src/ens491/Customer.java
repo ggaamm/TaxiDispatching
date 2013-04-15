@@ -33,6 +33,20 @@ public void setEndingNode(String endingNode) {
 	this.endingNode = endingNode;
 }
 
+public int getWaitingTime() {
+	return waitingTime;
+}
+public void setWaitingTime(int waitingTime) {
+	this.waitingTime = waitingTime;
+}
+
+public int getTravelTime() {
+	return travelTime;
+}
+public void setTravelTime(int travelTime) {
+	this.travelTime = travelTime;
+}
+
 static public enum CustomerStatus {InTaxi, AwaitingForTaxi, SearchingTaxi}; 
 private Taxi assignedTaxi;
 private int index;
@@ -40,4 +54,5 @@ private CustomerStatus customerStatus;
 private String startingNode;
 private String endingNode;
 private int waitingTime;
+private int travelTime;
 }

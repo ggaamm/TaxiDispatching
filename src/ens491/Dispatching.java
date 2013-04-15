@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import org.jgrapht.Graph;
 import org.jgrapht.alg.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
@@ -28,9 +27,10 @@ public class Dispatching {
 	private int customerSize;
 	private int taxiSize;
 	private static int index=1;
-	private Graph<CityNode, DefaultWeightedEdge> cityGraph;
+	//private Graph<CityNode, DefaultWeightedEdge> cityGraph;
 	private int totalPoints;
 	private int simulationStep;
+	private int currentSimulationTime;
 	
 	public Dispatching(City city,int taxiSize, int customerSize,int citySizeX,int citySizeY) {
 		// TODO Auto-generated constructor stub
@@ -47,23 +47,17 @@ public class Dispatching {
 		simulationStep = timeSimulation;
 		for(int i=0;i<timeSimulation;i++)
 		{
+			currentSimulationTime = i;
 			System.out.println("Simulation step:"+(i+1));
 			//generate customer
 			GenerateNewCustomer(i);
 			//assign customers to taxis;
 			AssignCustomerToTaxi();
-			//Update Taxi Movements
-			Move();
 			//Update travel times and statistics
 			UpdateStatisticsAndTime();
 		}
 	}	
 
-	private void Move() {
-		// TODO Auto-generated method stub
-		
-	}
-	
 	private void GenerateNewCustomer(int currentTime) {
 		// TODO Auto-generated method stub
 		if(randomGenerator.nextInt(2)>0) //generate customer
@@ -80,7 +74,8 @@ public class Dispatching {
 	}
 	
 	private Customer VacantCustomerWithLongestWaitingTime()
-	{/*
+	{
+		/*
 		List<Customer> custs = city.getCustomers();
 		randomGenerator.nextInt(custs.size());
 		for(Customer c:custs)
@@ -138,14 +133,16 @@ public class Dispatching {
 				t.setTaxiStatus(TaxiStatus.OccupiedTravellingWCustomer);
 				c.setCustomerStatus(CustomerStatus.InTaxi);
 				System.out.println("Customer "+c.getIndex()+" is travelling in Taxi "+t.index + " at time: "+simulationStep);
-				
-
+				t.setJourneyStartTime(currentSimulationTime);
+				t.setJourneyEndTime((int) GetPathLengthBetweenTwoPoints(t.getCurrentPoint(),c.getEndingNode()));
 			}
 			else
 			{
 				t.setTaxiStatus(TaxiStatus.OccupiedTravellingWOCustomer);
 				c.setCustomerStatus(CustomerStatus.AwaitingForTaxi);
 				System.out.println("Customer "+c.getIndex()+" is awaiting in Taxi "+t.index + " at time: "+simulationStep);
+				t.setJourneyStartTime(currentSimulationTime);
+				t.setJourneyEndTime((int) GetPathLengthBetweenTwoPoints(t.getCurrentPoint(),c.getStartingNode()));
 			}
 			
 			break;
@@ -153,6 +150,13 @@ public class Dispatching {
 		}
 	}
 
+	public double GetPathLengthBetweenTwoPoints(String v1, String v2)
+	{
+		DijkstraShortestPath<String, DefaultWeightedEdge> path = 
+				new DijkstraShortestPath<String, DefaultWeightedEdge>(city.getCityGraph(),v1,v2);
+		return path.getPathLength();
+	}
+	
 	public void GenerateCustomer() {
 		// TODO Auto-generated method stub
 		Customer c = new Customer();
@@ -164,6 +168,7 @@ public class Dispatching {
 		index++;
 		c.setCustomerStatus(CustomerStatus.SearchingTaxi);
 		city.AddCustomer(c);
+		System.out.println("Customer "+c.getIndex()+" is generated. Current point: "+c.getStartingNode());
 	}
 
 
@@ -172,21 +177,92 @@ public class Dispatching {
 		for(int i=0;i<taxiSize;i++)
 		{
 			Taxi c = new Taxi();
-			Integer randGen = randomGenerator.nextInt(cityDimensionX);
+			Integer randGen = randomGenerator.nextInt(totalPoints);
 			c.setCurrentPoint(randGen.toString());
 			c.index = i+1;
 			c.setTaxiStatus(TaxiStatus.Vacant);
 			city.AddTaxi(c);
+			System.out.println("Taxi "+c.getIndex()+" is generated. Current point: "+c.getCurrentPoint());
 		}		
 	}
 	
 
 	private void UpdateStatisticsAndTime() {
 		// TODO Auto-generated method stub
-		
+		List<Customer> customers = city.getCustomers();
+		for(Customer c:customers)
+		{
+			if(c.getCustomerStatus() != CustomerStatus.InTaxi)
+			{
+				c.setWaitingTime(c.getWaitingTime()+1);
+				System.out.println("Current waiting time for customer: "+c.getIndex()+" is "+c.getWaitingTime());
+			}
+			else
+			{
+				c.setTravelTime(c.getTravelTime()+1);
+				System.out.println("Current waiting time for customer: "+c.getIndex()+" is "+c.getWaitingTime());
+			}
+		}
+		WriteCustomerStatisticsToFile();
+		List<Taxi> taxis = city.getTaxis();
+		for(Taxi t:taxis)
+		{
+			if(t.getTaxiStatus() == TaxiStatus.Vacant)
+			{
+				t.setWaitingTime(t.getWaitingTime()+1);
+				System.out.println("Current waiting time for taxi: "+t.getIndex()+" is "+t.getWaitingTime());
+			}
+			else
+			{
+				t.setTravelTime(t.getTravelTime()+1);
+				System.out.println("Current waiting time for taxi: "+t.getIndex()+" is "+t.getWaitingTime());
+			}
+
+		}
+		WriteTaxiStatisticsToFile();
+		for(Taxi t:taxis)
+		{
+			if(t.getJourneyEndTime() == currentSimulationTime)
+			{
+				Customer customer = t.getAssignedCust();
+				t.setTaxiStatus(TaxiStatus.Vacant);
+				//assign Taxi to Random Place
+				Integer randGen = randomGenerator.nextInt(totalPoints);
+				t.setCurrentPoint(randGen.toString());
+				t.setJourneyStartTime(0);
+				t.setJourneyEndTime(0);
+				t.setTravelTime(0);
+				t.setWaitingTime(0);
+				t.setAssignedCust(null);
+				t.setEndingPoint("");
+				System.out.println("Taxi: "+t.getIndex()+" reached destination,moved to point and currently vacant: "+t.getCurrentPoint());
+
+				for(int i = 0;i<customers.size();i++)
+				{
+					if(customers.get(i).getIndex() == customer.getIndex())
+					{
+						System.out.println("Customer: "+customers.get(i).getIndex()+" reached destination, will be removed");
+						customers.remove(i);
+						index--;
+						System.out.println("Current index: "+index);
+						
+					}
+				}
+			}
+		}
 	}
 	
-    private static Map<String, Integer> sortByComparator(Map<String, Integer> unsortMap, final boolean order) //false for descending order
+    private void WriteCustomerStatisticsToFile() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void WriteTaxiStatisticsToFile() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private static Map<String, Integer> sortByComparator(Map<String, Integer> unsortMap, final boolean order) //false for descending order
     {
 
         List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(unsortMap.entrySet());

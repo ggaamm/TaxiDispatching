@@ -48,6 +48,20 @@ public class Taxi {
 		this.journeyEndTime = journeyEndTime;
 	}
 	
+	public int getWaitingTime() {
+		return waitingTime;
+	}
+	public void setWaitingTime(int waitingTime) {
+		this.waitingTime = waitingTime;
+	}
+
+	public int getTravelTime() {
+		return travelTime;
+	}
+	public void setTravelTime(int travelTime) {
+		this.travelTime = travelTime;
+	}
+
 	public static enum TaxiStatus {OccupiedTravellingWOCustomer, Vacant, OccupiedTravellingWCustomer};
 	Customer assignedCust;
 	int index;
@@ -56,4 +70,6 @@ public class Taxi {
 	private String endingPoint;
 	private int journeyStartTime;
 	private int journeyEndTime;
+	private int waitingTime;
+	private int travelTime;
 }
