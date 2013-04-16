@@ -21,9 +21,6 @@ public class Main {
 		city.GenerateTravelTimes();
 
 		dispatchingSystem.GenerateCustomer(); // creates a customer
-		
-		dispatchingSystem.GenerateCustomer(); // creates a customer
-
 
 		dispatchingSystem.GenerateTaxi();
 

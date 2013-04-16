@@ -22,7 +22,7 @@ import ens491.Taxi.TaxiStatus;
 public class Dispatching {
 
 	Random randomGenerator = new Random();
-	Map<Integer, Integer> customerWaitingTime = new HashMap<Integer, Integer>();
+	Map<String, Integer> customerWaitingTime = new HashMap<String, Integer>();
 
 	City city;
 	private int cityDimensionX;
@@ -34,6 +34,10 @@ public class Dispatching {
 	private int totalPoints;
 	private int simulationStep;
 	private int currentSimulationTime;
+	private int simType;
+
+	// private HashMap<String,Integer> CustomerWaitingHash = new
+	// HashMap<String,Integer>();
 
 	public Dispatching(City city, int taxiSize, int customerSize,
 			int citySizeX, int citySizeY) {
@@ -50,30 +54,55 @@ public class Dispatching {
 		simulationStep = timeSimulation;
 		for (int i = 0; i < timeSimulation; i++) {
 			currentSimulationTime = i;
-			System.out.println("Simulation step:" + (i + 1));
+			System.out.println("Simulation step:" + i);
 			// generate customer
 			GenerateNewCustomer(i);
 			// assign customers to taxis;
-			AssignCustomerToTaxi();
+			AssignCustomerToTaxi(0);
+			//
+			MoveTaxi();
 			// Update travel times and statistics
 			UpdateStatisticsAndTime();
 		}
 	}
 
-	private void GenerateNewCustomer(int currentTime) {
+	private void MoveTaxi() {
 		// TODO Auto-generated method stub
-		if (randomGenerator.nextInt(2) > 0) // generate customer
+		List<Taxi> taxis = city.getTaxis();
+		for(Taxi t:taxis)
 		{
-			if (city.getCustomers().size() < customerSize)
-				GenerateCustomer();
-			System.out.println("Generated Customer at time step: "
-					+ (currentTime + 1));
+			if(t.getTaxiStatus()==TaxiStatus.OccupiedTravellingWOCustomer)
+			{
+				if(t.getJourneyEndTime() ==currentSimulationTime)
+				{
+					t.getAssignedCust().setCustomerStatus(CustomerStatus.InTaxi);
+					t.setTaxiStatus(TaxiStatus.OccupiedTravellingWCustomer);
+					int endTime = (int) GetPathLengthBetweenTwoPoints(t.getAssignedCust().getStartingNode(),t.getAssignedCust().getEndingNode())+currentSimulationTime;
+					t.setJourneyStartTime(currentSimulationTime);
+					t.setJourneyEndTime(endTime);
+					t.setCurrentPoint(t.getAssignedCust().getStartingNode());
+					System.out.println("Taxi " + t.getIndex()
+						+ " picked up customer " + t.getAssignedCust().getIndex() + " at current time "+currentSimulationTime+" and will end travel at:"+t.getJourneyEndTime());
+				}
+			}
 		}
 	}
 
-	private void AssignCustomerToTaxi() {
+	private void GenerateNewCustomer(int currentTime) {
 		// TODO Auto-generated method stub
-		RandomVacantCustomer();
+		if (randomGenerator.nextInt(3) > 0) // generate customer
+		{
+			if (city.getCustomers().size() < customerSize)
+				GenerateCustomer();
+		}
+	}
+
+	private void AssignCustomerToTaxi(int type) {
+		// TODO Auto-generated method stub
+		if (simType == 0)
+			RandomVacantCustomer(0);
+		else if (simType == 1)
+			VacantCustomerWithLongestWaitingTime();
 	}
 
 	private Customer VacantCustomerWithLongestWaitingTime() {
@@ -87,16 +116,17 @@ public class Dispatching {
 		return new Customer();
 	}
 
-	private void RandomVacantCustomer() {
-		List<Customer> custs = city.getCustomers();
-		for(int i=0;i<custs.size();i++)
-		{
-			Customer c = custs.get(randomGenerator.nextInt(custs.size()));
-			if (c.getCustomerStatus() == CustomerStatus.SearchingTaxi) {
-				FindRandomVacantTaxiAndAssignCustomer(c);
-				break;
+	private void RandomVacantCustomer(int isRandom) {
+		if (isRandom == 0) {
+			List<Customer> custs = city.getCustomers();
+			for (int i = 0; i < custs.size(); i++) {
+				Customer c = custs.get(randomGenerator.nextInt(custs.size()));
+				if (c.getCustomerStatus() == CustomerStatus.SearchingTaxi) {
+					FindRandomVacantTaxiAndAssignCustomer(c);
+					break;
+				}
 			}
-		}
+		} 
 	}
 
 	private void FindClosestVacantTaxiAndAssignCustomer(Customer c) {
@@ -115,7 +145,7 @@ public class Dispatching {
 
 	private void FindRandomVacantTaxiAndAssignCustomer(Customer c) {
 		List<Taxi> taxis = city.getTaxis();
-		while (true) {
+		for(int i=0;i<taxis.size();i++) {
 			Taxi t = taxis.get(randomGenerator.nextInt(taxis.size()));
 			// select the shortest taxi distance
 			if (t.getTaxiStatus() == TaxiStatus.Vacant) {
@@ -131,9 +161,10 @@ public class Dispatching {
 							+ " at time: " + simulationStep);
 					t.setJourneyStartTime(currentSimulationTime);
 					int endTime = (int) GetPathLengthBetweenTwoPoints(
-							t.getCurrentPoint(), c.getEndingNode());
+							t.getCurrentPoint(), c.getEndingNode())+currentSimulationTime;
 					t.setJourneyEndTime(endTime);
-					System.out.println("Taxi "+t.getIndex() +"reaching customer at end time: "+endTime);
+					System.out.println("Taxi " + t.getIndex()
+							+ " reaching customer at end time: ");
 				} else {
 					t.setTaxiStatus(TaxiStatus.OccupiedTravellingWOCustomer);
 					c.setCustomerStatus(CustomerStatus.AwaitingForTaxi);
@@ -142,11 +173,12 @@ public class Dispatching {
 							+ currentSimulationTime);
 					t.setJourneyStartTime(currentSimulationTime);
 					int endTime = (int) GetPathLengthBetweenTwoPoints(
-							t.getCurrentPoint(), c.getStartingNode());
+							t.getCurrentPoint(), c.getStartingNode())+currentSimulationTime;
 					t.setJourneyEndTime(endTime);
-					System.out.println("Taxi reaching destination at end time: "+endTime);
+					System.out
+							.println("Taxi " + t.getIndex()+ " reaching destination at end time: "
+									+ endTime);
 				}
-
 				break;
 			}
 		}
@@ -164,13 +196,17 @@ public class Dispatching {
 		Integer randGen = randomGenerator.nextInt(totalPoints);
 		c.setStartingNode(randGen.toString());
 		c.setIndex(index);
+		int startNode;
+		do{
 		randGen = randomGenerator.nextInt(totalPoints);
+		startNode = Integer.parseInt(c.getStartingNode());
+		}while(randGen == startNode);
 		c.setEndingNode(randGen.toString());
 		index++;
 		c.setCustomerStatus(CustomerStatus.SearchingTaxi);
 		city.AddCustomer(c);
 		System.out.println("Customer " + c.getIndex()
-				+ " is generated. Current point: " + c.getStartingNode());
+				+ " is generated. Current point: " + c.getStartingNode()+" customer end point: "+c.getEndingNode());
 	}
 
 	public void GenerateTaxi() {
@@ -197,8 +233,8 @@ public class Dispatching {
 						+ c.getIndex() + " is " + c.getWaitingTime());
 			} else {
 				c.setTravelTime(c.getTravelTime() + 1);
-				System.out.println("Current waiting time for customer: "
-						+ c.getIndex() + " is " + c.getWaitingTime());
+				System.out.println("Current travelling time for customer: "
+						+ c.getIndex() + " is " + c.getTravelTime());
 			}
 		}
 		WriteCustomerStatisticsToFile();
@@ -210,20 +246,20 @@ public class Dispatching {
 						+ t.getIndex() + " is " + t.getWaitingTime());
 			} else {
 				t.setTravelTime(t.getTravelTime() + 1);
-				System.out.println("Current waiting time for taxi: "
-						+ t.getIndex() + " is " + t.getWaitingTime());
+				System.out.println("Current travelling time for taxi: "
+						+ t.getIndex() + " is " + t.getTravelTime());
 			}
 
 		}
 		WriteTaxiStatisticsToFile();
 		for (Taxi t : taxis) {
-			if (t.getTaxiStatus() != TaxiStatus.Vacant) {
+			if (t.getTaxiStatus() != TaxiStatus.Vacant && t.getTaxiStatus() != TaxiStatus.OccupiedTravellingWOCustomer) {
 				if (t.getJourneyEndTime() == currentSimulationTime) {
 					Customer customer = t.getAssignedCust();
 					t.setTaxiStatus(TaxiStatus.Vacant);
 					// assign Taxi to Random Place
-					Integer randGen = randomGenerator.nextInt(totalPoints);
-					t.setCurrentPoint(randGen.toString());
+					//Integer randGen = randomGenerator.nextInt(totalPoints);
+					t.setCurrentPoint(customer.getEndingNode()); //stays where 
 					t.setJourneyStartTime(0);
 					t.setJourneyEndTime(0);
 					t.setTravelTime(0);
@@ -233,7 +269,7 @@ public class Dispatching {
 					System.out
 							.println("Taxi: "
 									+ t.getIndex()
-									+ " reached destination,moved to point and currently vacant: "
+									+ " reached destination,moved to point and currently vacant at: "
 									+ t.getCurrentPoint());
 
 					for (int i = 0; i < customers.size(); i++) {
@@ -242,7 +278,6 @@ public class Dispatching {
 									+ customers.get(i).getIndex()
 									+ " reached destination, will be removed");
 							customers.remove(i);
-							index--;
 							System.out.println("Current index: " + index);
 							break;
 						}
@@ -307,7 +342,7 @@ public class Dispatching {
 	private static Map<String, Integer> sortByComparator(
 			Map<String, Integer> unsortMap, final boolean order) // false for
 																	// descending
-																	// order
+																	// // order
 	{
 
 		List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(
