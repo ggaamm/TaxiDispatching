@@ -1,5 +1,8 @@
 package ens491;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -18,53 +21,53 @@ import ens491.Taxi.TaxiStatus;
 
 public class Dispatching {
 
-    Random randomGenerator = new Random();
-    Map<Integer,Integer> customerWaitingTime = new HashMap<Integer,Integer>();
+	Random randomGenerator = new Random();
+	Map<Integer, Integer> customerWaitingTime = new HashMap<Integer, Integer>();
 
 	City city;
 	private int cityDimensionX;
 	private int cityDimensionY;
 	private int customerSize;
 	private int taxiSize;
-	private static int index=1;
-	//private Graph<CityNode, DefaultWeightedEdge> cityGraph;
+	private static int index = 1;
+	// private Graph<CityNode, DefaultWeightedEdge> cityGraph;
 	private int totalPoints;
 	private int simulationStep;
 	private int currentSimulationTime;
-	
-	public Dispatching(City city,int taxiSize, int customerSize,int citySizeX,int citySizeY) {
+
+	public Dispatching(City city, int taxiSize, int customerSize,
+			int citySizeX, int citySizeY) {
 		// TODO Auto-generated constructor stub
 		this.cityDimensionX = citySizeX;
 		this.cityDimensionY = citySizeY;
 		this.customerSize = customerSize;
 		this.taxiSize = taxiSize;
 		this.city = city;
-		this.totalPoints = cityDimensionX*cityDimensionY;
+		this.totalPoints = cityDimensionX * cityDimensionY;
 	}
 
-	public void Simulate(int timeSimulation)
-	{
+	public void Simulate(int timeSimulation) {
 		simulationStep = timeSimulation;
-		for(int i=0;i<timeSimulation;i++)
-		{
+		for (int i = 0; i < timeSimulation; i++) {
 			currentSimulationTime = i;
-			System.out.println("Simulation step:"+(i+1));
-			//generate customer
+			System.out.println("Simulation step:" + (i + 1));
+			// generate customer
 			GenerateNewCustomer(i);
-			//assign customers to taxis;
+			// assign customers to taxis;
 			AssignCustomerToTaxi();
-			//Update travel times and statistics
+			// Update travel times and statistics
 			UpdateStatisticsAndTime();
 		}
-	}	
+	}
 
 	private void GenerateNewCustomer(int currentTime) {
 		// TODO Auto-generated method stub
-		if(randomGenerator.nextInt(2)>0) //generate customer
+		if (randomGenerator.nextInt(2) > 0) // generate customer
 		{
-			if(city.getCustomers().size()<customerSize)
-			GenerateCustomer();
-			System.out.println("Generated Customer at time step: "+(currentTime+1));
+			if (city.getCustomers().size() < customerSize)
+				GenerateCustomer();
+			System.out.println("Generated Customer at time step: "
+					+ (currentTime + 1));
 		}
 	}
 
@@ -72,91 +75,89 @@ public class Dispatching {
 		// TODO Auto-generated method stub
 		RandomVacantCustomer();
 	}
-	
-	private Customer VacantCustomerWithLongestWaitingTime()
-	{
+
+	private Customer VacantCustomerWithLongestWaitingTime() {
 		/*
-		List<Customer> custs = city.getCustomers();
-		randomGenerator.nextInt(custs.size());
-		for(Customer c:custs)
-		{
-			if(c.getCustomerStatus() == CustomerStatus.SearchingTaxi)
-			{
-				if(randomGenerator.nextInt(2)>0) //generate taxi
-				{
-					//FindVacantTaxiAndAssignCustomer(c);
-				}
-			}
-		}*/
+		 * List<Customer> custs = city.getCustomers();
+		 * randomGenerator.nextInt(custs.size()); for(Customer c:custs) {
+		 * if(c.getCustomerStatus() == CustomerStatus.SearchingTaxi) {
+		 * if(randomGenerator.nextInt(2)>0) //generate taxi {
+		 * //FindVacantTaxiAndAssignCustomer(c); } } }
+		 */
 		return new Customer();
 	}
 
-	private void RandomVacantCustomer()
-	{
+	private void RandomVacantCustomer() {
 		List<Customer> custs = city.getCustomers();
-		while(true)
-		{	Customer c = custs.get(randomGenerator.nextInt(custs.size()));
-			if(c.getCustomerStatus()==CustomerStatus.SearchingTaxi)
-			{
+		for(int i=0;i<custs.size();i++)
+		{
+			Customer c = custs.get(randomGenerator.nextInt(custs.size()));
+			if (c.getCustomerStatus() == CustomerStatus.SearchingTaxi) {
 				FindRandomVacantTaxiAndAssignCustomer(c);
 				break;
 			}
 		}
 	}
-	
+
 	private void FindClosestVacantTaxiAndAssignCustomer(Customer c) {
 		// TODO Auto-generated method stub
 		// TODO Auto-generated method stub
 		List<Taxi> taxis = city.getTaxis();
 		HashMap<String, Double> taxiDistance = new HashMap<String, Double>();
-		for(Taxi t:taxis)
-		{
-			DijkstraShortestPath<String, DefaultWeightedEdge> path = 
-					new DijkstraShortestPath<String, DefaultWeightedEdge>(city.getCityGraph(),c.getStartingNode(),t.getCurrentPoint());
+		for (Taxi t : taxis) {
+			DijkstraShortestPath<String, DefaultWeightedEdge> path = new DijkstraShortestPath<String, DefaultWeightedEdge>(
+					city.getCityGraph(), c.getStartingNode(),
+					t.getCurrentPoint());
 			taxiDistance.put(t.getCurrentPoint(), path.getPathLength());
-			//path.get
-		}
-	}
-	
-	private void FindRandomVacantTaxiAndAssignCustomer(Customer c) {
-		List<Taxi> taxis = city.getTaxis();
-		while(true)
-		{	Taxi t = taxis.get(randomGenerator.nextInt(taxis.size()));
-		//select the shortest taxi distance
-		if(t.getTaxiStatus() == TaxiStatus.Vacant)
-		{
-			t.setAssignedCust(c);
-			c.setAssignedTaxi(t);
-			System.out.println("Customer "+c.getIndex()+" is assigned to Taxi "+t.index);
-			if(t.getCurrentPoint().equals(c.getStartingNode()))
-			{
-				t.setTaxiStatus(TaxiStatus.OccupiedTravellingWCustomer);
-				c.setCustomerStatus(CustomerStatus.InTaxi);
-				System.out.println("Customer "+c.getIndex()+" is travelling in Taxi "+t.index + " at time: "+simulationStep);
-				t.setJourneyStartTime(currentSimulationTime);
-				t.setJourneyEndTime((int) GetPathLengthBetweenTwoPoints(t.getCurrentPoint(),c.getEndingNode()));
-			}
-			else
-			{
-				t.setTaxiStatus(TaxiStatus.OccupiedTravellingWOCustomer);
-				c.setCustomerStatus(CustomerStatus.AwaitingForTaxi);
-				System.out.println("Customer "+c.getIndex()+" is awaiting in Taxi "+t.index + " at time: "+simulationStep);
-				t.setJourneyStartTime(currentSimulationTime);
-				t.setJourneyEndTime((int) GetPathLengthBetweenTwoPoints(t.getCurrentPoint(),c.getStartingNode()));
-			}
-			
-			break;
-		}
+			// path.get
 		}
 	}
 
-	public double GetPathLengthBetweenTwoPoints(String v1, String v2)
-	{
-		DijkstraShortestPath<String, DefaultWeightedEdge> path = 
-				new DijkstraShortestPath<String, DefaultWeightedEdge>(city.getCityGraph(),v1,v2);
+	private void FindRandomVacantTaxiAndAssignCustomer(Customer c) {
+		List<Taxi> taxis = city.getTaxis();
+		while (true) {
+			Taxi t = taxis.get(randomGenerator.nextInt(taxis.size()));
+			// select the shortest taxi distance
+			if (t.getTaxiStatus() == TaxiStatus.Vacant) {
+				t.setAssignedCust(c);
+				c.setAssignedTaxi(t);
+				System.out.println("Customer " + c.getIndex()
+						+ " is assigned to Taxi " + t.index);
+				if (t.getCurrentPoint().equals(c.getStartingNode())) {
+					t.setTaxiStatus(TaxiStatus.OccupiedTravellingWCustomer);
+					c.setCustomerStatus(CustomerStatus.InTaxi);
+					System.out.println("Customer " + c.getIndex()
+							+ " is travelling in Taxi " + t.index
+							+ " at time: " + simulationStep);
+					t.setJourneyStartTime(currentSimulationTime);
+					int endTime = (int) GetPathLengthBetweenTwoPoints(
+							t.getCurrentPoint(), c.getEndingNode());
+					t.setJourneyEndTime(endTime);
+					System.out.println("Taxi "+t.getIndex() +"reaching customer at end time: "+endTime);
+				} else {
+					t.setTaxiStatus(TaxiStatus.OccupiedTravellingWOCustomer);
+					c.setCustomerStatus(CustomerStatus.AwaitingForTaxi);
+					System.out.println("Customer " + c.getIndex()
+							+ " is awaiting for Taxi " + t.index + " at time: "
+							+ currentSimulationTime);
+					t.setJourneyStartTime(currentSimulationTime);
+					int endTime = (int) GetPathLengthBetweenTwoPoints(
+							t.getCurrentPoint(), c.getStartingNode());
+					t.setJourneyEndTime(endTime);
+					System.out.println("Taxi reaching destination at end time: "+endTime);
+				}
+
+				break;
+			}
+		}
+	}
+
+	public double GetPathLengthBetweenTwoPoints(String v1, String v2) {
+		DijkstraShortestPath<String, DefaultWeightedEdge> path = new DijkstraShortestPath<String, DefaultWeightedEdge>(
+				city.getCityGraph(), v1, v2);
 		return path.getPathLength();
 	}
-	
+
 	public void GenerateCustomer() {
 		// TODO Auto-generated method stub
 		Customer c = new Customer();
@@ -168,131 +169,170 @@ public class Dispatching {
 		index++;
 		c.setCustomerStatus(CustomerStatus.SearchingTaxi);
 		city.AddCustomer(c);
-		System.out.println("Customer "+c.getIndex()+" is generated. Current point: "+c.getStartingNode());
+		System.out.println("Customer " + c.getIndex()
+				+ " is generated. Current point: " + c.getStartingNode());
 	}
 
-
 	public void GenerateTaxi() {
-		//taxi generation
-		for(int i=0;i<taxiSize;i++)
-		{
+		// taxi generation
+		for (int i = 0; i < taxiSize; i++) {
 			Taxi c = new Taxi();
 			Integer randGen = randomGenerator.nextInt(totalPoints);
 			c.setCurrentPoint(randGen.toString());
-			c.index = i+1;
+			c.index = i + 1;
 			c.setTaxiStatus(TaxiStatus.Vacant);
 			city.AddTaxi(c);
-			System.out.println("Taxi "+c.getIndex()+" is generated. Current point: "+c.getCurrentPoint());
-		}		
+			System.out.println("Taxi " + c.getIndex()
+					+ " is generated. Current point: " + c.getCurrentPoint());
+		}
 	}
-	
 
 	private void UpdateStatisticsAndTime() {
 		// TODO Auto-generated method stub
 		List<Customer> customers = city.getCustomers();
-		for(Customer c:customers)
-		{
-			if(c.getCustomerStatus() != CustomerStatus.InTaxi)
-			{
-				c.setWaitingTime(c.getWaitingTime()+1);
-				System.out.println("Current waiting time for customer: "+c.getIndex()+" is "+c.getWaitingTime());
-			}
-			else
-			{
-				c.setTravelTime(c.getTravelTime()+1);
-				System.out.println("Current waiting time for customer: "+c.getIndex()+" is "+c.getWaitingTime());
+		for (Customer c : customers) {
+			if (c.getCustomerStatus() != CustomerStatus.InTaxi) {
+				c.setWaitingTime(c.getWaitingTime() + 1);
+				System.out.println("Current waiting time for customer: "
+						+ c.getIndex() + " is " + c.getWaitingTime());
+			} else {
+				c.setTravelTime(c.getTravelTime() + 1);
+				System.out.println("Current waiting time for customer: "
+						+ c.getIndex() + " is " + c.getWaitingTime());
 			}
 		}
 		WriteCustomerStatisticsToFile();
 		List<Taxi> taxis = city.getTaxis();
-		for(Taxi t:taxis)
-		{
-			if(t.getTaxiStatus() == TaxiStatus.Vacant)
-			{
-				t.setWaitingTime(t.getWaitingTime()+1);
-				System.out.println("Current waiting time for taxi: "+t.getIndex()+" is "+t.getWaitingTime());
-			}
-			else
-			{
-				t.setTravelTime(t.getTravelTime()+1);
-				System.out.println("Current waiting time for taxi: "+t.getIndex()+" is "+t.getWaitingTime());
+		for (Taxi t : taxis) {
+			if (t.getTaxiStatus() == TaxiStatus.Vacant) {
+				t.setWaitingTime(t.getWaitingTime() + 1);
+				System.out.println("Current waiting time for taxi: "
+						+ t.getIndex() + " is " + t.getWaitingTime());
+			} else {
+				t.setTravelTime(t.getTravelTime() + 1);
+				System.out.println("Current waiting time for taxi: "
+						+ t.getIndex() + " is " + t.getWaitingTime());
 			}
 
 		}
 		WriteTaxiStatisticsToFile();
-		for(Taxi t:taxis)
-		{
-			if(t.getJourneyEndTime() == currentSimulationTime)
-			{
-				Customer customer = t.getAssignedCust();
-				t.setTaxiStatus(TaxiStatus.Vacant);
-				//assign Taxi to Random Place
-				Integer randGen = randomGenerator.nextInt(totalPoints);
-				t.setCurrentPoint(randGen.toString());
-				t.setJourneyStartTime(0);
-				t.setJourneyEndTime(0);
-				t.setTravelTime(0);
-				t.setWaitingTime(0);
-				t.setAssignedCust(null);
-				t.setEndingPoint("");
-				System.out.println("Taxi: "+t.getIndex()+" reached destination,moved to point and currently vacant: "+t.getCurrentPoint());
+		for (Taxi t : taxis) {
+			if (t.getTaxiStatus() != TaxiStatus.Vacant) {
+				if (t.getJourneyEndTime() == currentSimulationTime) {
+					Customer customer = t.getAssignedCust();
+					t.setTaxiStatus(TaxiStatus.Vacant);
+					// assign Taxi to Random Place
+					Integer randGen = randomGenerator.nextInt(totalPoints);
+					t.setCurrentPoint(randGen.toString());
+					t.setJourneyStartTime(0);
+					t.setJourneyEndTime(0);
+					t.setTravelTime(0);
+					t.setWaitingTime(0);
+					t.setAssignedCust(null);
+					t.setEndingPoint("");
+					System.out
+							.println("Taxi: "
+									+ t.getIndex()
+									+ " reached destination,moved to point and currently vacant: "
+									+ t.getCurrentPoint());
 
-				for(int i = 0;i<customers.size();i++)
-				{
-					if(customers.get(i).getIndex() == customer.getIndex())
-					{
-						System.out.println("Customer: "+customers.get(i).getIndex()+" reached destination, will be removed");
-						customers.remove(i);
-						index--;
-						System.out.println("Current index: "+index);
-						
+					for (int i = 0; i < customers.size(); i++) {
+						if (customers.get(i).getIndex() == customer.getIndex()) {
+							System.out.println("Customer: "
+									+ customers.get(i).getIndex()
+									+ " reached destination, will be removed");
+							customers.remove(i);
+							index--;
+							System.out.println("Current index: " + index);
+							break;
+						}
 					}
 				}
 			}
 		}
 	}
-	
-    private void WriteCustomerStatisticsToFile() {
+
+	private void WriteCustomerStatisticsToFile() {
 		// TODO Auto-generated method stub
-		
+		try {
+			PrintWriter writer = new PrintWriter(
+					"/Users/gorkeralp/Desktop/customerstatistics.txt", "UTF-8");
+			List<Customer> custs = city.getCustomers();
+			for (Customer c : custs) {
+				if (c.getCustomerStatus() == CustomerStatus.SearchingTaxi) {
+					writer.println("Customer: " + c.getIndex() + " "
+							+ "waiting time:" + c.getWaitingTime()
+							+ " at sim step: " + currentSimulationTime);
+				} else {
+					writer.println("Customer: " + c.getIndex() + " "
+							+ "is assigned to taxi: "
+							+ c.getAssignedTaxi().getIndex()
+							+ " travelling time: " + c.getTravelTime()
+							+ " waiting time:" + c.getWaitingTime()
+							+ " at sim step: " + currentSimulationTime);
+				}
+			}
+			writer.close();
+		} catch (Exception e) {
+			System.out.println("writing file failed.");
+		}
 	}
 
 	private void WriteTaxiStatisticsToFile() {
 		// TODO Auto-generated method stub
-		
+		try {
+			PrintWriter writer = new PrintWriter(
+					"/Users/gorkeralp/Desktop/taxistatistics.txt", "UTF-8");
+			List<Taxi> taxis = city.getTaxis();
+			for (Taxi t : taxis) {
+				if (t.getTaxiStatus() == TaxiStatus.Vacant) {
+					writer.println("Taxi: " + t.getIndex() + " "
+							+ "waiting time:" + t.getWaitingTime()
+							+ " at sim step: " + currentSimulationTime);
+				} else {
+					writer.println("Taxi: " + t.getIndex() + " "
+							+ "is assigned to customer: "
+							+ t.getAssignedCust().getIndex()
+							+ " travelling time: " + t.getTravelTime()
+							+ " waiting time:" + t.getWaitingTime()
+							+ " at sim step: " + currentSimulationTime);
+				}
+			}
+			writer.close();
+		} catch (Exception e) {
+			System.out.println("writing file failed." + e.getCause());
+		}
 	}
 
-	private static Map<String, Integer> sortByComparator(Map<String, Integer> unsortMap, final boolean order) //false for descending order
-    {
+	private static Map<String, Integer> sortByComparator(
+			Map<String, Integer> unsortMap, final boolean order) // false for
+																	// descending
+																	// order
+	{
 
-        List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(unsortMap.entrySet());
+		List<Entry<String, Integer>> list = new LinkedList<Entry<String, Integer>>(
+				unsortMap.entrySet());
 
-        // Sorting the list based on values
-        Collections.sort(list, new Comparator<Entry<String, Integer>>()
-        {
-            public int compare(Entry<String, Integer> o1,
-                    Entry<String, Integer> o2)
-            {
-                if (order)
-                {
-                    return o1.getValue().compareTo(o2.getValue());
-                }
-                else
-                {
-                    return o2.getValue().compareTo(o1.getValue());
+		// Sorting the list based on values
+		Collections.sort(list, new Comparator<Entry<String, Integer>>() {
+			public int compare(Entry<String, Integer> o1,
+					Entry<String, Integer> o2) {
+				if (order) {
+					return o1.getValue().compareTo(o2.getValue());
+				} else {
+					return o2.getValue().compareTo(o1.getValue());
 
-                }
-            }
-        });
+				}
+			}
+		});
 
-        // Maintaining insertion order with the help of LinkedList
-        Map<String, Integer> sortedMap = new LinkedHashMap<String, Integer>();
-        for (Entry<String, Integer> entry : list)
-        {
-            sortedMap.put(entry.getKey(), entry.getValue());
-        }
+		// Maintaining insertion order with the help of LinkedList
+		Map<String, Integer> sortedMap = new LinkedHashMap<String, Integer>();
+		for (Entry<String, Integer> entry : list) {
+			sortedMap.put(entry.getKey(), entry.getValue());
+		}
 
-        return sortedMap;
-    }
-	
+		return sortedMap;
+	}
+
 }

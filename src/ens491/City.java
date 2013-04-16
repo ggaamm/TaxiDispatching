@@ -88,14 +88,14 @@ private void GenerateEdges() { //Generating 2D Mesh
 				CityEdge ce = new CityEdge();
 				ce.setCityFrom(cn.getName());
 				ce.setCityTo(cnR.getName());
-				ce.setCost(randomGenerator.nextInt(maxTravTime));
+				ce.setCost(randomGenerator.nextInt(maxTravTime)+1);
 				edges.add(ce);
 				
 				cnR.getNeighbors().set(0, cn.getName()); //add to west
 				ce = new CityEdge();
 				ce.setCityFrom(cnR.getName());
 				ce.setCityTo(cn.getName());
-				ce.setCost(randomGenerator.nextInt(maxTravTime));
+				ce.setCost(randomGenerator.nextInt(maxTravTime)+1);
 				edges.add(ce);
 				
 			}
@@ -113,7 +113,7 @@ private void GenerateEdges() { //Generating 2D Mesh
 				ce = new CityEdge();
 				ce.setCityFrom(cnU.getName());
 				ce.setCityTo(cn.getName());
-				ce.setCost(randomGenerator.nextInt(maxTravTime));
+				ce.setCost(randomGenerator.nextInt(maxTravTime)+1);
 				edges.add(ce);
 			}
 		}
