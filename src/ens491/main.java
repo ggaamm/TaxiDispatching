@@ -9,14 +9,20 @@ public class Main {
 		// TODO Auto-generated method stub
 		int citySizeX = 4;
 		int citySizeY = 4;
-		int taxiSize = 3;
-		int custSize = 5;
-		int longestTravTime = 2;
-		int simulationTime = 10;
+		int taxiSize = 4;
+		int custSize = 6;
+		int longestTravTime = 10;
+		int shortestTravTime = 5;
+		int simulationTime = 15;
+		int randomOrLongestWaitingCust = 1; // 0 random 1 longest waiting
+		int randomOrClosestWaitingTaxi = 1;
+		int farPoints = 15;
 		City city = new City(taxiSize, custSize, citySizeX, citySizeY,
 				longestTravTime);
+		int fixedOutgoingTime = 5;
 		Dispatching dispatchingSystem = new Dispatching(city, taxiSize,
-				custSize, citySizeX, citySizeY);
+				custSize, citySizeX, citySizeY, randomOrLongestWaitingCust,
+				randomOrClosestWaitingTaxi, farPoints, fixedOutgoingTime);
 
 		city.GenerateTravelTimes();
 
