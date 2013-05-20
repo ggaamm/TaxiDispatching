@@ -42,6 +42,10 @@ public class Dispatching {
 	private int farPoints;
 	private int fixedOutgoingTime;
 	private ArrayList<Integer> taxiSlots = new ArrayList<Integer>();
+	private double maxCustWaitingTime = 0;
+	private double maxTaxiWaitingTime = 0;
+	private double avgCustWaitingTime = 0;
+	private double avgTaxiWaitingTime = 0;
 
 	// private HashMap<String,Integer> CustomerWaitingHash = new
 	// HashMap<String,Integer>();
@@ -87,6 +91,12 @@ public class Dispatching {
 			// Update travel times and statistics
 			UpdateStatisticsAndTime();
 		}
+		System.out.printf("Max Customer Waiting Time: "+ "%.2f\n",maxCustWaitingTime);
+		System.out.printf("Max Taxi Idle Time: "+ "%.2f\n",maxTaxiWaitingTime);
+		double avgCust = avgCustWaitingTime/timeSimulation/customerSize;
+		double avgTaxi = avgTaxiWaitingTime/timeSimulation/taxiSize;
+		System.out.printf("Avg. Customer Waiting Time: "+"%.2f\n", avgCust);
+		System.out.printf("Avg. Taxi Idle Time: "+"%.2f\n", avgTaxi);
 	}
 
 	private void MoveTaxi() {
@@ -208,20 +218,26 @@ public class Dispatching {
 			closestTaxiDistance = FindClosestTaxi(c);
 			closestTaxiEntry = closestTaxiDistance.entrySet().iterator();
 		}
-		for (int i = 0; i < taxis.size(); i++) {
-			Taxi t;
+		for (int i = 0; i < taxis.size();) {
+			Taxi t=null;
 			if (randomOrClosest == 0) // 0 is random
 				t = taxis.get(randomGenerator.nextInt(taxis.size()));
 			else // closest
 			{
 				if (closestTaxiEntry.hasNext()) {
+					while(closestTaxiEntry.hasNext()){
 					Entry<String, Integer> entry = closestTaxiEntry.next();
 					int index = Integer.parseInt(entry.getKey());
-					t = taxis.get(index - 1);
-					System.out.println("Closest Taxi index: " + index
-							+ " distance: " + entry.getValue() + " isvacant?: "
-							+ t.getTaxiStatus());
-				} else {
+					if(taxis.get(index - 1).getTaxiStatus()==TaxiStatus.Vacant){
+						t = taxis.get(index - 1);
+					//System.out.println("Closest Taxi index: " + index
+					//		+ " distance: " + entry.getValue() + " isvacant?: "
+					//		+ t.getTaxiStatus());
+					}
+					}
+				} 
+				if(t==null) 
+				{
 					t = taxis.get(randomGenerator.nextInt(taxis.size()));
 				}
 			}
@@ -253,9 +269,9 @@ public class Dispatching {
 					} else {
 						t.setTaxiStatus(TaxiStatus.OccupiedTravellingWOCustomer);
 						c.setCustomerStatus(CustomerStatus.AwaitingForTaxi);
-						System.out.println("Customer " + c.getIndex()
-								+ " is awaiting for Taxi " + t.index
-								+ " at time: " + currentSimulationTime);
+						//System.out.println("Customer " + c.getIndex()
+						//		+ " is awaiting for Taxi " + t.index
+						//		+ " at time: " + currentSimulationTime);
 						t.setJourneyStartTime(currentSimulationTime);
 						int endTime = (int) GetPathLengthBetweenTwoPoints(
 								t.getCurrentPoint(), c.getStartingNode())
@@ -316,29 +332,35 @@ public class Dispatching {
 		for (Customer c : customers) {
 			if (c.getCustomerStatus() != CustomerStatus.InTaxi) {
 				c.setWaitingTime(c.getWaitingTime() + 1);
-				System.out.println("Current waiting time for customer: "
-						+ c.getIndex() + " is " + c.getWaitingTime());
+				//System.out.println("Current waiting time for customer: "
+					//	+ c.getIndex() + " is " + c.getWaitingTime());
+				avgCustWaitingTime +=c.getWaitingTime();
+				if(maxCustWaitingTime<c.getWaitingTime()) maxCustWaitingTime = c.getWaitingTime();
+					
 			} else {
 				c.setTravelTime(c.getTravelTime() + 1);
-				System.out.println("Current travelling time for customer: "
-						+ c.getIndex() + " is " + c.getTravelTime());
+				//System.out.println("Current travelling time for customer: "
+						//+ c.getIndex() + " is " + c.getTravelTime());
 			}
 		}
-		WriteCustomerStatisticsToFile();
+		//WriteCustomerStatisticsToFile();
 		List<Taxi> taxis = city.getTaxis();
 		for (Taxi t : taxis) {
 			if (t.getTaxiStatus() == TaxiStatus.Vacant) {
 				t.setWaitingTime(t.getWaitingTime() + 1);
-				System.out.println("Current waiting time for taxi: "
-						+ t.getIndex() + " is " + t.getWaitingTime());
+				//System.out.println("Current waiting time for taxi: "
+				//		+ t.getIndex() + " is " + t.getWaitingTime());
+				avgTaxiWaitingTime +=t.getWaitingTime();
+				if(maxTaxiWaitingTime<t.getWaitingTime()) maxTaxiWaitingTime = t.getWaitingTime();
+
 			} else {
 				t.setTravelTime(t.getTravelTime() + 1);
-				System.out.println("Current travelling time for taxi: "
-						+ t.getIndex() + " is " + t.getTravelTime());
+				//System.out.println("Current travelling time for taxi: "
+				//		+ t.getIndex() + " is " + t.getTravelTime());
 			}
 
 		}
-		WriteTaxiStatisticsToFile();
+		//WriteTaxiStatisticsToFile();
 		for (Taxi t : taxis) {
 			if (t.getTaxiStatus() != TaxiStatus.Vacant
 					&& t.getTaxiStatus() != TaxiStatus.OccupiedTravellingWOCustomer) {
